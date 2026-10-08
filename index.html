@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
-/* Layout: 한 화면 슬롯머신(먹을 것·갈 곳·할 것) → 확정 → 뽑기판 편집 → 지난 데이트 기록 */
+/* Layout: 코스 카드(노선 → 역 → 점심 → 컨텐츠 → 저녁, 칸마다 바꾸기) → 조건 → 컨텐츠 목록 → 기록 */
 :root {
   --bg: #f1f2fa;
   --surface: #ffffff;
@@ -37,31 +37,34 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { margin: 0; }
-body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; padding-inline: 16px; padding-block: 24px 64px; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; padding-inline: 16px; padding-block: 24px 64px; }
 main { max-width: 560px; margin-inline: auto; display: flex; flex-direction: column; gap: 32px; }
 h1, h2 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; }
 h1 { font-size: 2.1rem; line-height: 1.15; }
 h2 { font-size: 1.35rem; }
 p { margin: 0; }
-html { -webkit-text-size-adjust: 100%; }
-button { font: inherit; color: inherit; cursor: pointer; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .sub { color: var(--muted); }
 header { display: flex; flex-direction: column; gap: 6px; }
+section { display: flex; flex-direction: column; gap: 12px; }
 
-/* slots */
-.machine { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.slot { display: grid; grid-template-columns: 1fr auto; align-items: stretch; gap: 8px; }
-.reel { background: var(--slot); color: var(--slot-ink); border-radius: 14px; padding: 10px 16px; min-height: 76px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+/* course */
+.course { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.slot { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: stretch; }
+.reel { background: var(--slot); color: var(--slot-ink); border-radius: 14px; padding: 10px 16px; min-height: 72px; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; }
 .reel small { font-size: 0.72rem; letter-spacing: 0.12em; opacity: 0.7; }
-.reel b { font-family: var(--font-display); font-weight: 400; font-size: 1.55rem; line-height: 1.25; overflow-wrap: anywhere; }
-.reel.spinning b { opacity: 0.75; }
-.reel.locked { outline: 3px solid var(--accent); outline-offset: -3px; }
-.side { display: flex; flex-direction: column; gap: 6px; }
-.icon-btn { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 0 12px; flex: 1; min-width: 64px; font-size: 0.82rem; color: var(--muted); }
-.icon-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 700; }
-.cta { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 14px; padding: 16px; font-family: var(--font-display); font-size: 1.35rem; }
+.reel b { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; line-height: 1.25; overflow-wrap: anywhere; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reel.spinning b { opacity: 0.7; }
+.meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; }
+.tag { border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; opacity: 0.85; white-space: nowrap; }
+.badge { font-family: var(--font-body); font-size: 0.85rem; font-weight: 700; border-radius: 999px; padding: 1px 12px; }
+.swap { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 0 14px; min-width: 64px; font-size: 0.85rem; color: var(--muted); }
+.swap:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+.swap:disabled { opacity: 0.45; cursor: default; }
+.cta { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 14px; padding: 16px; font-family: var(--font-display); font-size: 1.35rem; margin-top: 4px; }
 .cta:disabled { opacity: 0.6; cursor: default; }
 .row { display: flex; gap: 8px; }
 .row > * { flex: 1; }
@@ -70,21 +73,23 @@ header { display: flex; flex-direction: column; gap: 6px; }
 .ghost:disabled { opacity: 0.45; cursor: default; }
 .note { text-align: center; font-size: 0.85rem; color: var(--muted); min-height: 1.3em; }
 
-/* editor */
-section { display: flex; flex-direction: column; gap: 12px; }
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.tab { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-weight: 500; }
-.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.add { display: flex; gap: 8px; }
-.add input { flex: 1; min-width: 0; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
-.add button { background: var(--ink); color: var(--bg); border: 0; border-radius: 12px; padding: 0 16px; font-weight: 700; }
+/* options */
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.opt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.opt > span { font-size: 0.82rem; color: var(--muted); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.seg label { flex: 1; text-align: center; padding: 8px 6px; cursor: pointer; font-size: 0.9rem; position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg label:has(input:checked) { background: var(--ink); color: var(--bg); font-weight: 700; }
+.seg label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+/* activities */
+.group { display: flex; flex-direction: column; }
+.group h3 { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); font-weight: 500; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0; }
-.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 6px 4px 12px; max-width: 100%; }
-.chip span { overflow-wrap: anywhere; }
-.chip button { border: 0; background: transparent; color: var(--muted); width: 24px; height: 24px; border-radius: 50%; line-height: 1; font-size: 1.1rem; }
-.chip button:hover { background: var(--accent-soft); color: var(--ink); }
-.count { color: var(--muted); font-size: 0.85rem; }
-.reset { align-self: flex-start; background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 4px 0; font-size: 0.85rem; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 0.9rem; text-align: left; overflow-wrap: anywhere; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 700; }
 
 /* history */
 .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -96,38 +101,54 @@ section { display: flex; flex-direction: column; gap: 12px; }
 .entry.done .what { text-decoration: line-through; color: var(--muted); }
 .entry.done .acts .toggle { background: var(--ok); color: #fff; border-color: var(--ok); }
 .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; padding: 16px; text-align: center; }
-@media (prefers-reduced-motion: no-preference) {
-  .reel b { transition: opacity 0.15s; }
-}
+@media (prefers-reduced-motion: no-preference) { .reel b { transition: opacity 0.15s; } }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>오늘은 뭐 하지?<br>랜덤 데이트 뽑기</h1>
-    <p class="sub">먹을 것, 갈 곳, 할 것을 한 번에 뽑아요. 마음에 드는 칸은 고정하고 나머지만 다시 뽑을 수 있어요.</p>
+    <h1>오늘은 어디 가지?<br>랜덤 데이트 뽑기</h1>
+    <p class="sub">지하철 노선과 서울 안의 역을 뽑고, 점심, 컨텐츠, 저녁까지 한 번에 정해요. 마음에 안 드는 칸은 "바꾸기"로 그 칸만 다시 뽑아요.</p>
   </header>
 
-  <div class="machine" aria-live="polite">
-    <div class="slot" data-k="food"><div class="reel" id="reel-food"><small>먹을 것</small><b>?</b></div><div class="side"><button class="icon-btn" data-lock="food" aria-pressed="false">고정</button><button class="icon-btn" data-redo="food">다시</button></div></div>
-    <div class="slot" data-k="place"><div class="reel" id="reel-place"><small>갈 곳</small><b>?</b></div><div class="side"><button class="icon-btn" data-lock="place" aria-pressed="false">고정</button><button class="icon-btn" data-redo="place">다시</button></div></div>
-    <div class="slot" data-k="act"><div class="reel" id="reel-act"><small>할 것</small><b>?</b></div><div class="side"><button class="icon-btn" data-lock="act" aria-pressed="false">고정</button><button class="icon-btn" data-redo="act">다시</button></div></div>
-    <button class="cta" id="spin">뽑기!</button>
-    <div class="row"><button class="ghost strong" id="save" disabled>이걸로 확정</button><button class="ghost" id="copy" disabled>복사</button></div>
-    <p class="note" id="note">고정하지 않은 칸을 모두 새로 뽑아요.</p>
+  <div class="course" aria-live="polite">
+    <div class="slot"><div class="reel" id="reel-line"></div><button class="swap" type="button" data-swap="line">바꾸기</button></div>
+    <div class="slot"><div class="reel" id="reel-station"></div><button class="swap" type="button" data-swap="station">바꾸기</button></div>
+    <div class="slot"><div class="reel" id="reel-lunch"></div><button class="swap" type="button" data-swap="lunch">바꾸기</button></div>
+    <div class="slot"><div class="reel" id="reel-act"></div><button class="swap" type="button" data-swap="act">바꾸기</button></div>
+    <div class="slot"><div class="reel" id="reel-dinner"></div><button class="swap" type="button" data-swap="dinner">바꾸기</button></div>
+    <button class="cta" id="spin" type="button">코스 다시 뽑기</button>
+    <div class="row"><button class="ghost strong" id="save" type="button" disabled>이 코스로 확정</button><button class="ghost" id="copy" type="button" disabled>복사</button></div>
+    <p class="note" id="note">노선을 바꾸면 역도 새로 뽑아요.</p>
   </div>
 
   <section>
-    <h2>뽑기판 만들기</h2>
-    <p class="sub">둘이 하고 싶은 걸 직접 넣고, 싫은 건 빼 보세요. 이 기기에 저장돼요.</p>
-    <div class="tabs" role="tablist" id="tabs"></div>
-    <form class="add" id="addForm">
-      <input id="addInput" type="text" maxlength="30" autocomplete="off" aria-label="새 항목">
-      <button type="submit">추가</button>
-    </form>
-    <ul class="chips" id="chips"></ul>
-    <p class="count" id="count"></p>
-    <button class="reset" id="reset">기본 목록으로 되돌리기</button>
+    <h2>조건</h2>
+    <div class="opts">
+      <div class="opt" role="radiogroup" aria-labelledby="l-budget">
+        <span id="l-budget">식사 가격 (1인)</span>
+        <div class="seg">
+          <label><input type="radio" name="budget" value="1">1만원 안팎</label>
+          <label><input type="radio" name="budget" value="2" checked>2만원대까지</label>
+        </div>
+      </div>
+      <div class="opt" role="radiogroup" aria-labelledby="l-where">
+        <span id="l-where">컨텐츠 장소</span>
+        <div class="seg">
+          <label><input type="radio" name="where" value="all" checked>전체</label>
+          <label><input type="radio" name="where" value="in">실내</label>
+          <label><input type="radio" name="where" value="out">야외</label>
+        </div>
+      </div>
+    </div>
+    <p class="sub">점심과 저녁은 음식 종류가 겹치지 않게 뽑아요. 조건은 다음에 뽑거나 바꿀 때부터 적용돼요.</p>
+  </section>
+
+  <section>
+    <h2>데이트 컨텐츠 <span id="actCount" class="sub"></span></h2>
+    <p class="sub">직접 고르고 싶으면 아래에서 눌러 보세요. 누른 컨텐츠가 코스에 들어가요.</p>
+    <div class="group"><h3>실내</h3><ul class="chips" id="actIn"></ul></div>
+    <div class="group"><h3>야외</h3><ul class="chips" id="actOut"></ul></div>
   </section>
 
   <section>
@@ -138,154 +159,220 @@ section { display: flex; flex-direction: column; gap: 12px; }
 
 <script>
 (function () {
-  var KEYS = ["food", "place", "act"];
-  var LABEL = { food: "먹을 것", place: "갈 곳", act: "할 것" };
-  var DEFAULTS = {
-    food: ["떡볶이", "삼겹살", "파스타", "초밥", "마라탕", "치킨과 맥주", "브런치", "칼국수", "곱창", "햄버거", "쌀국수", "디저트 카페 투어", "편의점 야식", "고기 뷔페", "피자"],
-    place: ["한강공원", "영화관", "보드게임 카페", "서점", "전시회", "놀이공원", "남산 산책", "방탈출 카페", "동네 시장", "만화카페", "야경 명소", "루프탑 카페", "수족관", "드라이브", "공방"],
-    act: ["서로 코디해 주기", "인생네컷 찍기", "각자 상대 몰래 선물 사기", "손잡고 1만 보 걷기", "같이 요리하기", "노래방 가기", "서로 초상화 그리기", "영화 보고 평점 매기기", "옛날 사진 같이 보기", "편지 한 장씩 쓰기", "볼링 내기", "버킷리스트 5개 적기", "서로에게 질문 10개", "커플 셀카 대회", "소원 하나씩 들어주기"]
-  };
-  var LS = "randomDate.v1";
-  var state = { lists: clone(DEFAULTS), history: [] };
-  var cur = { food: null, place: null, act: null };
-  var locked = { food: false, place: false, act: false };
-  var tab = "food", spinning = false, resetArmed = false;
+  /* 서울 안에 있는 역만 담았어요. 노선마다 대표 역을 골랐어요. */
+  var LINES = [
+    { n: "1호선", c: "#0052A4", f: "#fff", s: ["서울역","시청","종각","종로3가","종로5가","동대문","동묘앞","신설동","청량리","회기","노량진","영등포","용산","남영","구로","가산디지털단지","창동","도봉산"] },
+    { n: "2호선", c: "#00A84D", f: "#fff", s: ["시청","을지로입구","을지로3가","동대문역사문화공원","신당","왕십리","성수","건대입구","잠실","삼성","선릉","역삼","강남","교대","서초","사당","낙성대","서울대입구","신림","대림","구로디지털단지","신도림","영등포구청","당산","합정","홍대입구","신촌","이대","충정로"] },
+    { n: "3호선", c: "#EF7C1C", f: "#fff", s: ["경복궁","안국","종로3가","을지로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","수서","오금","불광","연신내","녹번","홍제","독립문"] },
+    { n: "4호선", c: "#00A5DE", f: "#fff", s: ["명동","회현","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당","혜화","한성대입구","성신여대입구","길음","미아","수유","쌍문","창동","노원","상계","동대문","충무로","동대문역사문화공원"] },
+    { n: "5호선", c: "#996CAC", f: "#fff", s: ["광화문","종로3가","을지로4가","청구","왕십리","군자","천호","강동","올림픽공원","여의도","여의나루","마포","공덕","애오개","충정로","목동","김포공항","발산"] },
+    { n: "6호선", c: "#CD7C2F", f: "#fff", s: ["합정","망원","마포구청","상수","광흥창","대흥","공덕","효창공원앞","삼각지","녹사평","이태원","한강진","버티고개","약수","청구","신당","동묘앞","창신","보문","안암","고려대","월곡","화랑대","봉화산","응암","증산","디지털미디어시티","월드컵경기장"] },
+    { n: "7호선", c: "#747F00", f: "#fff", s: ["도봉산","노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지"] },
+    { n: "8호선", c: "#E6186C", f: "#fff", s: ["암사","천호","강동구청","몽촌토성","잠실","석촌","송파","가락시장","문정","장지"] },
+    { n: "9호선", c: "#BDB092", f: "#1c1f3d", s: ["김포공항","마곡나루","가양","당산","선유도","여의도","노량진","흑석","동작","신반포","고속터미널","신논현","선정릉","봉은사","종합운동장"] },
+    { n: "경의중앙선", c: "#77C4A3", f: "#1c1f3d", s: ["서울역","공덕","홍대입구","가좌","디지털미디어시티","이촌","서빙고","한남","옥수","응봉","왕십리","청량리","회기"] },
+    { n: "수인분당선", c: "#F5A200", f: "#1c1f3d", s: ["왕십리","서울숲","압구정로데오","강남구청","선릉","한티","도곡","구룡","개포동","대모산입구","수서"] },
+    { n: "신분당선", c: "#D4003B", f: "#fff", s: ["신사","논현","신논현","강남","양재","양재시민의숲"] },
+    { n: "공항철도", c: "#0090D2", f: "#fff", s: ["서울역","공덕","홍대입구","디지털미디어시티","마곡나루","김포공항"] }
+  ];
 
-  function clone(o) { return JSON.parse(JSON.stringify(o)); }
-  function $(id) { return document.getElementById(id); }
-  function load() {
-    try {
-      var s = JSON.parse(localStorage.getItem(LS));
-      if (s && s.lists && s.history) { KEYS.forEach(function (k) { if (!Array.isArray(s.lists[k])) s.lists[k] = clone(DEFAULTS[k]); }); state = s; }
-    } catch (e) {}
-  }
-  function persist() { try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {} }
-  function pick(k) {
-    var l = state.lists[k];
-    if (!l.length) return null;
-    if (l.length === 1) return l[0];
-    var v; do { v = l[Math.floor(Math.random() * l.length)]; } while (v === cur[k]);
-    return v;
-  }
-  function setNote(t) { $("note").textContent = t; }
-  function show(k, text) { $("reel-" + k).querySelector("b").textContent = text; }
+  /* p: 1 = 1인 1만원 안팎, 2 = 1~2만원대. 비싼 메뉴는 넣지 않았어요. */
+  function M(n, c, p) { return { n: n, c: c, p: p }; }
+  var MEALS = {
+    lunch: [
+      M("김치찌개","한식",1), M("비빔밥","한식",1), M("칼국수","한식",1), M("순두부찌개","한식",1), M("냉면","한식",1), M("설렁탕","한식",1),
+      M("돈까스","일식",1), M("우동","일식",1), M("규동","일식",1), M("라멘","일식",1), M("연어덮밥","일식",2),
+      M("짜장면·짬뽕","중식",1), M("마라탕","중식",2),
+      M("파스타","양식",2), M("리조또","양식",2), M("샌드위치 브런치","양식",2), M("수제버거","버거",2),
+      M("떡볶이·김밥","분식",1), M("쌀국수","아시안",1), M("팟타이","아시안",2), M("카레","아시안",1), M("부리토·타코","멕시칸",2)
+    ],
+    dinner: [
+      M("삼겹살","고기",2), M("닭갈비","한식",2), M("샤브샤브","한식",2), M("족발·보쌈","한식",2), M("감자탕","한식",1), M("부대찌개","한식",1), M("곱창","한식",2),
+      M("초밥","일식",2), M("이자카야 안주","일식",2), M("라멘","일식",1), M("텐동","일식",2),
+      M("양꼬치","중식",2), M("마라샹궈","중식",2), M("탕수육 세트","중식",2),
+      M("피자","양식",2), M("파스타","양식",2), M("수제버거","버거",2), M("치킨","치킨",2),
+      M("쌀국수와 분짜","아시안",1), M("인도 커리와 난","아시안",2), M("타코","멕시칸",2), M("떡볶이 파티","분식",1)
+    ]
+  };
+
+  function A(n, t) { return { n: n, t: t }; }
+  var ACTS = [
+    A("영화 보기","in"), A("보드게임 카페","in"), A("방탈출","in"), A("전시회 관람","in"), A("서점에서 서로 책 골라주기","in"),
+    A("인생네컷 찍기","in"), A("볼링","in"), A("코인노래방","in"), A("만화카페","in"), A("스크린 골프·야구","in"),
+    A("원데이 클래스(도예·향수)","in"), A("아쿠아리움","in"), A("팝업스토어 구경","in"), A("오락실 게임 대결","in"), A("공방에서 커플링 만들기","in"),
+    A("타로·사주 카페","in"), A("박물관·미술관","in"), A("찜질방","in"), A("쇼핑몰에서 서로 옷 골라주기","in"), A("클라이밍","in"),
+    A("뮤지컬·연극 보기","in"), A("디저트 카페 투어","in"), A("전통 찻집","in"), A("소품샵 구경하고 선물 사기","in"),
+    A("한강 피크닉","out"), A("동네 골목 산책","out"), A("야경 보기","out"), A("자전거 타기","out"), A("공원 돗자리 휴식","out"),
+    A("고궁 산책","out"), A("시장 먹거리 투어","out"), A("놀이공원","out"), A("전망대 올라가기","out"), A("서로 사진 찍어주기","out"),
+    A("벼룩시장·플리마켓","out"), A("노을 보며 맥주 한 캔","out"), A("천변 걷기","out"), A("배드민턴·캐치볼","out"), A("야외 공연·버스킹 보기","out"),
+    A("포장마차에서 한 잔","out")
+  ];
+
+  var LS = "randomDate.v2";
+  var LABEL = { line: "노선", station: "서울 안의 역", lunch: "점심", act: "컨텐츠", dinner: "저녁" };
+  var KEYS = ["line", "station", "lunch", "act", "dinner"];
+  var history = [];
+  var cur = { line: null, station: null, lunch: null, act: null, dinner: null };
+  var next = {};
+  var spinning = false;
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  function spinOne(k, delay) {
-    return new Promise(function (resolve) {
-      var final = pick(k), reel = $("reel-" + k);
-      if (final === null) { show(k, "목록이 비었어요"); cur[k] = null; return resolve(); }
-      if (reduce) { cur[k] = final; show(k, final); return resolve(); }
-      reel.classList.add("spinning");
-      var l = state.lists[k], t = setInterval(function () { show(k, l[Math.floor(Math.random() * l.length)]); }, 70);
-      setTimeout(function () { clearInterval(t); reel.classList.remove("spinning"); cur[k] = final; show(k, final); resolve(); }, delay);
-    });
-  }
-  function updateButtons() {
-    var ready = KEYS.every(function (k) { return cur[k]; });
-    $("save").disabled = !ready || spinning;
-    $("copy").disabled = !ready || spinning;
-    $("spin").disabled = spinning;
-  }
-  function spin(keys) {
-    if (spinning) return;
-    keys = keys.filter(function (k) { return !locked[k]; });
-    if (!keys.length) { setNote("전부 고정돼 있어요. 고정을 풀면 다시 뽑을 수 있어요."); return; }
-    spinning = true; updateButtons(); setNote("뽑는 중...");
-    Promise.all(keys.map(function (k, i) { return spinOne(k, 700 + i * 450); })).then(function () {
-      spinning = false; updateButtons();
-      setNote(KEYS.every(function (k) { return cur[k]; }) ? "마음에 들면 확정하고, 아니면 한 칸만 다시 뽑아요." : "비어 있는 목록에 항목을 추가해 주세요.");
-    });
-  }
-  function summary() { return cur.food + " 먹고, " + cur.place + " 가서, " + cur.act; }
+  function $(id) { return document.getElementById(id); }
+  function rnd(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function load() { try { var h = JSON.parse(localStorage.getItem(LS)); if (Array.isArray(h)) history = h; } catch (e) {} }
+  function persist() { try { localStorage.setItem(LS, JSON.stringify(history)); } catch (e) {} }
+  function opt(name) { return document.querySelector('input[name="' + name + '"]:checked').value; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function note(t) { $("note").textContent = t; }
 
-  document.querySelectorAll("[data-lock]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var k = b.dataset.lock; locked[k] = !locked[k];
-      b.setAttribute("aria-pressed", String(locked[k]));
-      b.textContent = locked[k] ? "고정됨" : "고정";
-      $("reel-" + k).classList.toggle("locked", locked[k]);
+  /* picking */
+  function pickAvoid(arr, current) {
+    var f = arr.filter(function (x) { return x !== current; });
+    return rnd(f.length ? f : arr);
+  }
+  function pickMeal(kind, otherCat) {
+    var max = Number(opt("budget"));
+    var pool = MEALS[kind].filter(function (m) { return m.p <= max && m.c !== otherCat; });
+    var f = pool.filter(function (m) { return !cur[kind] || m.n !== cur[kind].n; });
+    return rnd(f.length ? f : pool);
+  }
+  function actPool() { return ACTS.filter(function (a) { return opt("where") === "all" || a.t === opt("where"); }); }
+  function pickAct() { return pickAvoid(actPool(), cur.act); }
+  function pickLineAndStation() {
+    var line = pickAvoid(LINES, cur.line);
+    return { line: line, station: rnd(line.s) };
+  }
+
+  /* rendering */
+  function renderReel(k, flash) {
+    var r = $("reel-" + k), v = cur[k];
+    r.textContent = "";
+    r.appendChild(el("small", null, LABEL[k]));
+    var b = el("b");
+    r.appendChild(b);
+    if (flash != null) { b.textContent = flash; return; }
+    if (!v) { b.textContent = "?"; return; }
+    if (k === "line") {
+      var bd = el("span", "badge", v.n); bd.style.background = v.c; bd.style.color = v.f; b.appendChild(bd);
+      r.appendChild(el("div", "meta", "서울 안의 역 " + v.s.length + "곳 중에서 뽑아요"));
+    } else if (k === "station") {
+      b.textContent = v + "역";
+    } else if (k === "act") {
+      b.textContent = v.n;
+      var m = el("div", "meta"); m.appendChild(el("span", "tag", v.t === "in" ? "실내" : "야외")); r.appendChild(m);
+    } else {
+      b.textContent = v.n;
+      var mm = el("div", "meta");
+      mm.appendChild(el("span", "tag", v.c));
+      mm.appendChild(el("span", "tag", v.p === 1 ? "1만원 안팎" : "1~2만원대"));
+      r.appendChild(mm);
+    }
+  }
+  function complete() { return KEYS.every(function (k) { return cur[k]; }); }
+  function buttons() {
+    $("spin").disabled = spinning;
+    document.querySelectorAll(".swap").forEach(function (b) { b.disabled = spinning; });
+    $("save").disabled = spinning || !complete();
+    $("copy").disabled = spinning || !complete();
+  }
+
+  /* spinning: decide the results first, then animate each reel to its result */
+  function flashPool(k) {
+    if (k === "line") return LINES.map(function (l) { return l.n; });
+    if (k === "station") return (next.line || cur.line).s.map(function (s) { return s + "역"; });
+    if (k === "act") return actPool().map(function (a) { return a.n; });
+    return MEALS[k].map(function (m) { return m.n; });
+  }
+  function animate(k, delay) {
+    return new Promise(function (resolve) {
+      function done() { cur[k] = next[k]; renderReel(k); resolve(); }
+      if (reduce) return done();
+      var r = $("reel-" + k), pool = flashPool(k);
+      r.classList.add("spinning");
+      var t = setInterval(function () { renderReel(k, rnd(pool)); r.classList.add("spinning"); }, 70);
+      setTimeout(function () { clearInterval(t); r.classList.remove("spinning"); done(); }, delay);
     });
-  });
-  document.querySelectorAll("[data-redo]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var k = b.dataset.redo;
-      if (locked[k]) { setNote(LABEL[k] + " 칸이 고정돼 있어요. 고정을 먼저 풀어 주세요."); return; }
-      spin([k]);
+  }
+  function run(changes) {
+    if (spinning) return;
+    spinning = true; next = changes; buttons(); note("뽑는 중...");
+    var keys = KEYS.filter(function (k) { return changes[k]; });
+    Promise.all(keys.map(function (k, i) { return animate(k, 600 + i * 350); })).then(function () {
+      spinning = false; next = {}; buttons(); renderActs();
+      note("마음에 들면 확정하고, 아니면 칸마다 바꾸기를 눌러요.");
     });
+  }
+  function drawAll() {
+    var ls = pickLineAndStation();
+    var lunch = pickMeal("lunch", null);
+    run({ line: ls.line, station: ls.station, lunch: lunch, act: pickAct(), dinner: pickMeal("dinner", lunch.c) });
+  }
+  function swap(k) {
+    if (k === "line") run(pickLineAndStation());
+    else if (k === "station") run({ station: pickAvoid(cur.line.s, cur.station) });
+    else if (k === "act") run({ act: pickAct() });
+    else if (k === "lunch") run({ lunch: pickMeal("lunch", cur.dinner && cur.dinner.c) });
+    else run({ dinner: pickMeal("dinner", cur.lunch && cur.lunch.c) });
+  }
+  function summary() {
+    return cur.line.n + " " + cur.station + "역에서 만나요. 점심은 " + cur.lunch.n + ", 컨텐츠는 " + cur.act.n + ", 저녁은 " + cur.dinner.n + ".";
+  }
+
+  /* activity list */
+  function renderActs() {
+    $("actCount").textContent = ACTS.length + "개";
+    [["in", "actIn"], ["out", "actOut"]].forEach(function (g) {
+      var ul = $(g[1]); ul.textContent = "";
+      ACTS.filter(function (a) { return a.t === g[0]; }).forEach(function (a) {
+        var li = el("li"), b = el("button", "chip", a.n);
+        b.type = "button"; b.setAttribute("aria-pressed", String(cur.act === a));
+        b.addEventListener("click", function () {
+          if (spinning) return;
+          cur.act = a; renderReel("act"); renderActs(); buttons();
+          note("컨텐츠를 '" + a.n + "'(으)로 정했어요.");
+        });
+        li.appendChild(b); ul.appendChild(li);
+      });
+    });
+  }
+
+  /* history */
+  function renderLog() {
+    var ul = $("log"); ul.textContent = "";
+    if (!history.length) { ul.appendChild(el("li", "empty", "아직 기록이 없어요. 뽑은 코스를 확정하면 여기에 쌓여요.")); return; }
+    history.forEach(function (h) {
+      var li = el("li", "entry" + (h.done ? " done" : ""));
+      li.appendChild(el("time", null, h.date));
+      li.appendChild(el("div", "what", h.line + " " + h.station + "역 · 점심 " + h.lunch + " · " + h.act + " · 저녁 " + h.dinner));
+      var a = el("div", "acts");
+      var tg = el("button", "toggle", h.done ? "다녀옴" : "다녀왔어요"); tg.type = "button";
+      tg.addEventListener("click", function () { h.done = !h.done; persist(); renderLog(); });
+      var rm = el("button", null, "삭제"); rm.type = "button";
+      rm.addEventListener("click", function () { history = history.filter(function (x) { return x.id !== h.id; }); persist(); renderLog(); });
+      a.appendChild(tg); a.appendChild(rm); li.appendChild(a); ul.appendChild(li);
+    });
+  }
+
+  /* wire up */
+  $("spin").addEventListener("click", drawAll);
+  document.querySelectorAll("[data-swap]").forEach(function (b) {
+    b.addEventListener("click", function () { swap(b.dataset.swap); });
   });
-  $("spin").addEventListener("click", function () { spin(KEYS); });
   $("save").addEventListener("click", function () {
-    state.history.unshift({ id: Date.now(), date: new Date().toISOString().slice(0, 10), food: cur.food, place: cur.place, act: cur.act, done: false });
-    persist(); renderLog(); setNote("기록에 저장했어요. 다녀오면 '다녀옴'을 눌러 주세요.");
+    history.unshift({ id: Date.now(), date: new Date().toISOString().slice(0, 10), line: cur.line.n, station: cur.station, lunch: cur.lunch.n, act: cur.act.n, dinner: cur.dinner.n, done: false });
+    persist(); renderLog(); note("기록에 저장했어요. 다녀오면 '다녀왔어요'를 눌러 주세요.");
   });
   $("copy").addEventListener("click", function () {
     var txt = "오늘의 데이트: " + summary();
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(txt).then(function () { setNote("복사했어요. 메신저에 붙여 넣어 보세요."); }, function () { setNote(txt); });
-    } else { setNote(txt); }
+      navigator.clipboard.writeText(txt).then(function () { note("복사했어요. 메신저에 붙여 넣어 보세요."); }, function () { note(txt); });
+    } else { note(txt); }
   });
 
-  /* editor */
-  function renderTabs() {
-    var box = $("tabs"); box.innerHTML = "";
-    KEYS.forEach(function (k) {
-      var b = document.createElement("button");
-      b.className = "tab"; b.type = "button"; b.setAttribute("role", "tab");
-      b.setAttribute("aria-selected", String(k === tab));
-      b.textContent = LABEL[k] + " " + state.lists[k].length;
-      b.addEventListener("click", function () { tab = k; renderEditor(); });
-      box.appendChild(b);
-    });
-  }
-  function renderEditor() {
-    renderTabs();
-    $("addInput").placeholder = LABEL[tab] + " 추가 (예: " + DEFAULTS[tab][0] + ")";
-    var ul = $("chips"); ul.innerHTML = "";
-    state.lists[tab].forEach(function (item, i) {
-      var li = document.createElement("li"); li.className = "chip";
-      var s = document.createElement("span"); s.textContent = item;
-      var x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", item + " 삭제");
-      x.addEventListener("click", function () { state.lists[tab].splice(i, 1); persist(); renderEditor(); });
-      li.appendChild(s); li.appendChild(x); ul.appendChild(li);
-    });
-    $("count").textContent = state.lists[tab].length ? "" : "목록이 비었어요. 위에서 항목을 추가해 주세요.";
-    $("reset").textContent = resetArmed ? "정말 되돌릴까요? 한 번 더 누르면 직접 추가한 항목이 사라져요." : "기본 목록으로 되돌리기";
-  }
-  $("addForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    var v = $("addInput").value.trim();
-    if (!v) return;
-    if (state.lists[tab].indexOf(v) === -1) state.lists[tab].push(v);
-    $("addInput").value = ""; persist(); renderEditor(); $("addInput").focus();
-  });
-  $("reset").addEventListener("click", function () {
-    if (!resetArmed) { resetArmed = true; renderEditor(); return; }
-    state.lists = clone(DEFAULTS); resetArmed = false; persist(); renderEditor();
-  });
-
-  /* history */
-  function renderLog() {
-    var ul = $("log"); ul.innerHTML = "";
-    if (!state.history.length) {
-      var li = document.createElement("li"); li.className = "empty";
-      li.textContent = "아직 기록이 없어요. 뽑은 데이트를 확정하면 여기에 쌓여요."; ul.appendChild(li); return;
-    }
-    state.history.forEach(function (h) {
-      var li = document.createElement("li"); li.className = "entry" + (h.done ? " done" : "");
-      var t = document.createElement("time"); t.textContent = h.date;
-      var w = document.createElement("div"); w.className = "what"; w.textContent = h.food + " · " + h.place + " · " + h.act;
-      var a = document.createElement("div"); a.className = "acts";
-      var tg = document.createElement("button"); tg.className = "toggle"; tg.type = "button"; tg.textContent = h.done ? "다녀옴" : "다녀왔어요";
-      tg.addEventListener("click", function () { h.done = !h.done; persist(); renderLog(); });
-      var rm = document.createElement("button"); rm.type = "button"; rm.textContent = "삭제";
-      rm.addEventListener("click", function () { state.history = state.history.filter(function (x) { return x.id !== h.id; }); persist(); renderLog(); });
-      a.appendChild(tg); a.appendChild(rm);
-      li.appendChild(t); li.appendChild(w); li.appendChild(a); ul.appendChild(li);
-    });
-  }
-
-  load(); renderEditor(); renderLog(); updateButtons();
+  load();
+  KEYS.forEach(function (k) { renderReel(k); });
+  renderActs(); renderLog(); buttons();
+  drawAll(); /* 처음 열면 바로 한 코스를 보여줘요 */
 })();
 </script>
 </body>
