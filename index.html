@@ -87,9 +87,20 @@ section { display: flex; flex-direction: column; gap: 12px; }
 .group { display: flex; flex-direction: column; }
 .group h3 { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); font-weight: 500; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0; }
-.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 0.9rem; text-align: left; overflow-wrap: anywhere; }
-.chip:hover { border-color: var(--accent); }
-.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 700; }
+.chipbox { display: inline-flex; align-items: center; max-width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; }
+.chipbox:hover { border-color: var(--accent); }
+.chipbox.on { background: var(--accent-soft); border-color: var(--accent); }
+.chip { border: 0; background: transparent; padding: 5px 4px 5px 12px; font-size: 0.9rem; text-align: left; overflow-wrap: anywhere; min-width: 0; border-radius: 999px 0 0 999px; }
+.chip[aria-pressed="true"] { font-weight: 700; }
+.chipx { border: 0; background: transparent; color: var(--muted); width: 28px; height: 28px; margin-right: 2px; border-radius: 50%; font-size: 1.1rem; line-height: 1; flex: none; }
+.chipx:hover { background: var(--accent-soft); color: var(--ink); }
+.add { display: flex; gap: 8px; }
+.add input[type="text"] { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.add select { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
+.add button { background: var(--ink); color: var(--bg); border: 0; border-radius: 12px; padding: 0 16px; font-weight: 700; }
+.msg { font-size: 0.85rem; color: var(--muted); min-height: 1.3em; }
+.reset { align-self: flex-start; background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 4px 0; font-size: 0.85rem; }
+.none { color: var(--muted); font-size: 0.85rem; }
 
 /* history */
 .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -146,9 +157,16 @@ section { display: flex; flex-direction: column; gap: 12px; }
 
   <section>
     <h2>데이트 컨텐츠 <span id="actCount" class="sub"></span></h2>
-    <p class="sub">직접 고르고 싶으면 아래에서 눌러 보세요. 누른 컨텐츠가 코스에 들어가요.</p>
+    <p class="sub">컨텐츠를 누르면 코스에 들어가요. 마음에 안 드는 건 ×로 빼고, 하고 싶은 건 직접 추가하세요. 이 기기에 저장돼요.</p>
+    <form class="add" id="addForm">
+      <input id="addInput" type="text" maxlength="30" autocomplete="off" placeholder="추가할 컨텐츠 (예: 한강 자전거 대여)" aria-label="새 컨텐츠">
+      <select id="addType" aria-label="장소"><option value="in">실내</option><option value="out" selected>야외</option></select>
+      <button type="submit">추가</button>
+    </form>
+    <p class="msg" id="actMsg" aria-live="polite"></p>
     <div class="group"><h3>실내</h3><ul class="chips" id="actIn"></ul></div>
     <div class="group"><h3>야외</h3><ul class="chips" id="actOut"></ul></div>
+    <button class="reset" id="actReset" type="button">기본 목록으로 되돌리기</button>
   </section>
 
   <section>
@@ -196,7 +214,7 @@ section { display: flex; flex-direction: column; gap: 12px; }
   };
 
   function A(n, t) { return { n: n, t: t }; }
-  var ACTS = [
+  var DEFAULT_ACTS = [
     A("영화 보기","in"), A("보드게임 카페","in"), A("전시회 관람","in"), A("볼링","in"), A("코인노래방","in"),
     A("오락실 게임 대결","in"), A("팝업스토어 구경","in"), A("박물관·미술관","in"), A("찜질방","in"), A("소품샵 구경하고 선물 사기","in"),
     A("체험형 전시관(트릭아트·미디어아트)","in"), A("스포츠 경기 직관(야구·농구)","in"), A("콘솔 게임방(닌텐도·플스)","in"), A("인디 밴드 라이브 공연 보기","in"), A("블록·퍼즐 맞추기 카페","in"),
@@ -209,7 +227,10 @@ section { display: flex; flex-direction: column; gap: 12px; }
     A("테라스 카페에서 멍때리기","out"), A("벤치에 앉아 서로에게 편지 쓰기","out"), A("계절 축제·페스티벌 가기","out"), A("북촌·서촌 한옥 골목 걷기","out")
   ];
 
+  var ACTS = DEFAULT_ACTS.map(function (a) { return A(a.n, a.t); });
   var LS = "randomDate.v2";
+  var LS_ACTS = "randomDate.acts.v1";
+  var resetArmed = false;
   var LABEL = { line: "노선", station: "서울 안의 역", lunch: "점심", act: "컨텐츠", dinner: "저녁" };
   var KEYS = ["line", "station", "lunch", "act", "dinner"];
   var history = [];
@@ -220,7 +241,14 @@ section { display: flex; flex-direction: column; gap: 12px; }
 
   function $(id) { return document.getElementById(id); }
   function rnd(a) { return a[Math.floor(Math.random() * a.length)]; }
-  function load() { try { var h = JSON.parse(localStorage.getItem(LS)); if (Array.isArray(h)) history = h; } catch (e) {} }
+  function load() {
+    try { var h = JSON.parse(localStorage.getItem(LS)); if (Array.isArray(h)) history = h; } catch (e) {}
+    try {
+      var a = JSON.parse(localStorage.getItem(LS_ACTS));
+      if (Array.isArray(a) && a.every(function (x) { return x && typeof x.n === "string" && (x.t === "in" || x.t === "out"); })) ACTS = a.map(function (x) { return A(x.n, x.t); });
+    } catch (e) {}
+  }
+  function saveActs() { try { localStorage.setItem(LS_ACTS, JSON.stringify(ACTS)); } catch (e) {} }
   function persist() { try { localStorage.setItem(LS, JSON.stringify(history)); } catch (e) {} }
   function opt(name) { return document.querySelector('input[name="' + name + '"]:checked').value; }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
@@ -307,7 +335,7 @@ section { display: flex; flex-direction: column; gap: 12px; }
       spinning = false; next = {};
       KEYS.forEach(function (k) { if (!cur[k]) renderReel(k); });
       buttons(); renderActs();
-      note(complete() ? "마음에 들면 확정하고, 아니면 칸마다 바꾸기를 눌러요." : "다음 칸의 뽑기를 눌러 보세요.");
+      note(complete() ? "마음에 들면 확정하고, 아니면 칸마다 바꾸기를 눌러요." : (actPool().length ? "다음 칸의 뽑기를 눌러 보세요." : "컨텐츠가 비어 있어요. 아래에서 추가해 주세요."));
     });
   }
   function drawAll() {
@@ -324,7 +352,11 @@ section { display: flex; flex-direction: column; gap: 12px; }
       if (!cur.line) { note("노선을 먼저 뽑아 주세요."); return; }
       run({ station: pickAvoid(cur.line.s, cur.station) });
     }
-    else if (k === "act") run({ act: pickAct() });
+    else if (k === "act") {
+      var a = pickAct();
+      if (!a) { note("뽑을 컨텐츠가 없어요. 아래에서 추가해 주세요."); return; }
+      run({ act: a });
+    }
     else if (k === "lunch") run({ lunch: pickMeal("lunch", cur.dinner && cur.dinner.c) });
     else run({ dinner: pickMeal("dinner", cur.lunch && cur.lunch.c) });
   }
@@ -333,19 +365,32 @@ section { display: flex; flex-direction: column; gap: 12px; }
   }
 
   /* activity list */
+  function actMsg(t) { $("actMsg").textContent = t; }
   function renderActs() {
     $("actCount").textContent = ACTS.length + "개";
     [["in", "actIn"], ["out", "actOut"]].forEach(function (g) {
       var ul = $(g[1]); ul.textContent = "";
-      ACTS.filter(function (a) { return a.t === g[0]; }).forEach(function (a) {
-        var li = el("li"), b = el("button", "chip", a.n);
+      var list = ACTS.filter(function (a) { return a.t === g[0]; });
+      if (!list.length) { ul.appendChild(el("li", "none", "비어 있어요. 위에서 추가할 수 있어요.")); return; }
+      list.forEach(function (a) {
+        var li = el("li", "chipbox" + (cur.act === a ? " on" : ""));
+        var b = el("button", "chip", a.n);
         b.type = "button"; b.setAttribute("aria-pressed", String(cur.act === a));
         b.addEventListener("click", function () {
           if (spinning) return;
           cur.act = a; renderReel("act"); renderActs(); buttons();
           note("컨텐츠를 '" + a.n + "'(으)로 정했어요.");
         });
-        li.appendChild(b); ul.appendChild(li);
+        var x = el("button", "chipx", "\u00d7");
+        x.type = "button"; x.setAttribute("aria-label", a.n + " 빼기");
+        x.addEventListener("click", function () {
+          if (spinning) return;
+          ACTS = ACTS.filter(function (y) { return y !== a; });
+          if (cur.act === a) { cur.act = null; renderReel("act"); }
+          saveActs(); renderActs(); buttons();
+          actMsg("'" + a.n + "'을(를) 뺐어요.");
+        });
+        li.appendChild(b); li.appendChild(x); ul.appendChild(li);
       });
     });
   }
@@ -381,6 +426,27 @@ section { display: flex; flex-direction: column; gap: 12px; }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(txt).then(function () { note("복사했어요. 메신저에 붙여 넣어 보세요."); }, function () { note(txt); });
     } else { note(txt); }
+  });
+
+  $("addForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var v = $("addInput").value.trim(), t = $("addType").value;
+    if (!v) { actMsg("추가할 컨텐츠를 입력해 주세요."); return; }
+    if (ACTS.some(function (a) { return a.n === v; })) { actMsg("이미 있는 컨텐츠예요."); return; }
+    ACTS.push(A(v, t));
+    saveActs(); renderActs(); $("addInput").value = ""; $("addInput").focus();
+    actMsg("'" + v + "'을(를) " + (t === "in" ? "실내" : "야외") + "에 추가했어요.");
+  });
+  $("actReset").addEventListener("click", function () {
+    if (spinning) return;
+    if (!resetArmed) {
+      resetArmed = true; $("actReset").textContent = "정말 되돌릴까요? 한 번 더 누르면 직접 추가하고 뺀 내용이 모두 사라져요.";
+      return;
+    }
+    resetArmed = false; $("actReset").textContent = "기본 목록으로 되돌리기";
+    ACTS = DEFAULT_ACTS.map(function (a) { return A(a.n, a.t); });
+    cur.act = null; renderReel("act"); saveActs(); renderActs(); buttons();
+    actMsg("기본 목록으로 되돌렸어요.");
   });
 
   load();
