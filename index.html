@@ -108,18 +108,18 @@ section { display: flex; flex-direction: column; gap: 12px; }
 <main>
   <header>
     <h1>오늘은 어디 가지?<br>랜덤 데이트 뽑기</h1>
-    <p class="sub">지하철 노선과 서울 안의 역을 뽑고, 점심, 컨텐츠, 저녁까지 한 번에 정해요. 마음에 안 드는 칸은 "바꾸기"로 그 칸만 다시 뽑아요.</p>
+    <p class="sub">지하철 노선과 서울 안의 역을 뽑고, 점심, 컨텐츠, 저녁까지 한 번에 정해요. 칸마다 뽑기 버튼을 눌러 하나씩 돌리고, 마음에 안 드는 칸은 "바꾸기"로 그 칸만 다시 뽑아요. 한 번에 다 뽑을 수도 있어요.</p>
   </header>
 
   <div class="course" aria-live="polite">
-    <div class="slot"><div class="reel" id="reel-line"></div><button class="swap" type="button" data-swap="line">바꾸기</button></div>
-    <div class="slot"><div class="reel" id="reel-station"></div><button class="swap" type="button" data-swap="station">바꾸기</button></div>
-    <div class="slot"><div class="reel" id="reel-lunch"></div><button class="swap" type="button" data-swap="lunch">바꾸기</button></div>
-    <div class="slot"><div class="reel" id="reel-act"></div><button class="swap" type="button" data-swap="act">바꾸기</button></div>
-    <div class="slot"><div class="reel" id="reel-dinner"></div><button class="swap" type="button" data-swap="dinner">바꾸기</button></div>
-    <button class="cta" id="spin" type="button">코스 다시 뽑기</button>
+    <div class="slot"><div class="reel" id="reel-line"></div><button class="swap" type="button" data-swap="line">뽑기</button></div>
+    <div class="slot"><div class="reel" id="reel-station"></div><button class="swap" type="button" data-swap="station">뽑기</button></div>
+    <div class="slot"><div class="reel" id="reel-lunch"></div><button class="swap" type="button" data-swap="lunch">뽑기</button></div>
+    <div class="slot"><div class="reel" id="reel-act"></div><button class="swap" type="button" data-swap="act">뽑기</button></div>
+    <div class="slot"><div class="reel" id="reel-dinner"></div><button class="swap" type="button" data-swap="dinner">뽑기</button></div>
+    <button class="cta" id="spin" type="button">전체 한 번에 뽑기</button>
     <div class="row"><button class="ghost strong" id="save" type="button" disabled>이 코스로 확정</button><button class="ghost" id="copy" type="button" disabled>복사</button></div>
-    <p class="note" id="note">노선을 바꾸면 역도 새로 뽑아요.</p>
+    <p class="note" id="note">칸마다 "뽑기"를 눌러 하나씩 돌려 보세요. 노선을 먼저 뽑아야 역을 뽑을 수 있어요.</p>
   </div>
 
   <section>
@@ -251,7 +251,7 @@ section { display: flex; flex-direction: column; gap: 12px; }
     var b = el("b");
     r.appendChild(b);
     if (flash != null) { b.textContent = flash; return; }
-    if (!v) { b.textContent = "?"; return; }
+    if (!v) { b.textContent = "?"; r.appendChild(el("div", "meta", k === "station" && !cur.line ? "노선을 먼저 뽑아요" : "뽑기를 눌러요")); return; }
     if (k === "line") {
       var bd = el("span", "badge", v.n); bd.style.background = v.c; bd.style.color = v.f; b.appendChild(bd);
       r.appendChild(el("div", "meta", "서울 안의 역 " + v.s.length + "곳 중에서 뽑아요"));
@@ -271,7 +271,12 @@ section { display: flex; flex-direction: column; gap: 12px; }
   function complete() { return KEYS.every(function (k) { return cur[k]; }); }
   function buttons() {
     $("spin").disabled = spinning;
-    document.querySelectorAll(".swap").forEach(function (b) { b.disabled = spinning; });
+    document.querySelectorAll(".swap").forEach(function (b) {
+      var k = b.dataset.swap;
+      b.disabled = spinning || (k === "station" && !cur.line);
+      b.textContent = cur[k] ? "바꾸기" : "뽑기";
+    });
+    $("spin").textContent = complete() ? "전체 다시 뽑기" : "전체 한 번에 뽑기";
     $("save").disabled = spinning || !complete();
     $("copy").disabled = spinning || !complete();
   }
@@ -298,8 +303,10 @@ section { display: flex; flex-direction: column; gap: 12px; }
     spinning = true; next = changes; buttons(); note("뽑는 중...");
     var keys = KEYS.filter(function (k) { return changes[k]; });
     Promise.all(keys.map(function (k, i) { return animate(k, 600 + i * 350); })).then(function () {
-      spinning = false; next = {}; buttons(); renderActs();
-      note("마음에 들면 확정하고, 아니면 칸마다 바꾸기를 눌러요.");
+      spinning = false; next = {};
+      KEYS.forEach(function (k) { if (!cur[k]) renderReel(k); });
+      buttons(); renderActs();
+      note(complete() ? "마음에 들면 확정하고, 아니면 칸마다 바꾸기를 눌러요." : "다음 칸의 뽑기를 눌러 보세요.");
     });
   }
   function drawAll() {
@@ -308,8 +315,14 @@ section { display: flex; flex-direction: column; gap: 12px; }
     run({ line: ls.line, station: ls.station, lunch: lunch, act: pickAct(), dinner: pickMeal("dinner", lunch.c) });
   }
   function swap(k) {
-    if (k === "line") run(pickLineAndStation());
-    else if (k === "station") run({ station: pickAvoid(cur.line.s, cur.station) });
+    if (k === "line") {
+      var l = pickAvoid(LINES, cur.line);
+      run(cur.station ? { line: l, station: rnd(l.s) } : { line: l });
+    }
+    else if (k === "station") {
+      if (!cur.line) { note("노선을 먼저 뽑아 주세요."); return; }
+      run({ station: pickAvoid(cur.line.s, cur.station) });
+    }
     else if (k === "act") run({ act: pickAct() });
     else if (k === "lunch") run({ lunch: pickMeal("lunch", cur.dinner && cur.dinner.c) });
     else run({ dinner: pickMeal("dinner", cur.lunch && cur.lunch.c) });
@@ -372,7 +385,6 @@ section { display: flex; flex-direction: column; gap: 12px; }
   load();
   KEYS.forEach(function (k) { renderReel(k); });
   renderActs(); renderLog(); buttons();
-  drawAll(); /* 처음 열면 바로 한 코스를 보여줘요 */
 })();
 </script>
 </body>
